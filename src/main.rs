@@ -73,15 +73,20 @@ async fn main() -> std::io::Result<()> {
     use std::str::FromStr;
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
 
-    // parse commandline
-    let cli = Cli::parse();
+    async fn deepl_with_config() -> Result<deepl::Deepl, std::io::Error> {
+        // parse commandline
+        let cli = Cli::parse();
+        if let Some(cfg_file) = cli.config {
+            deepl::Deepl::with_config(&cfg_file)
+        } else {
+            deepl::Deepl::new()
+        }
+    }
 
     // Load DeepL config
-    let deepl = if let Some(cfg_file) = cli.config {
-        deepl::Deepl::with_config(&cfg_file)
-    } else {
-        deepl::Deepl::new()
-    };
+    let deepl = deepl_with_config().await;
+    // parse commandline
+    let cli = Cli::parse();
 
     match cli.command {
         Some(Commands::Translate {
@@ -98,15 +103,46 @@ async fn main() -> std::io::Result<()> {
                 deepl::Formality::from_str(&f)
             })?;
 
-            trans::translate_cmark_file(
-                &deepl.unwrap(),
-                lang_from,
-                lang_to,
-                formality,
-                &input,
-                &output,
-            )
-            .await?;
+            let is_dir_input = input.is_dir();
+            let is_dir_output = output.extension().is_none();
+            if is_dir_input != is_dir_output {
+                panic!("Input and output should be both directory or file");
+            }
+            let files = if is_dir_input {
+                let mut files = vec![];
+                for entry in std::fs::read_dir(&input)? {
+                    let entry = entry?;
+                    let path = entry.path();
+                    if path.is_file() && path.extension().unwrap() == "md" {
+                        let translate_output = output.clone().join(path.file_name().unwrap());
+                        files.push((path, translate_output));
+                    }
+                }
+                files
+            } else {
+                vec![(input, output.clone())]
+            };
+
+            let res = files
+                .iter()
+                .map(|i| async move {
+                    let (input, output) = i;
+                    // Reload DeepL config
+                    let deepl = deepl_with_config().await;
+                    // run translation
+                    let _res = trans::translate_cmark_file(
+                        &deepl.unwrap(),
+                        lang_from,
+                        lang_to,
+                        formality,
+                        &input,
+                        &output,
+                    )
+                    .await;
+                })
+                .collect::<Vec<_>>();
+            // Wait for all translation tasks
+            futures::future::join_all(res).await;
         }
         Some(Commands::Glossary { command }) => {
             // Glossary management
@@ -120,12 +156,7 @@ async fn main() -> std::io::Result<()> {
                     let from_lang = deepl::Language::from_str(&from)?;
                     let to_lang = deepl::Language::from_str(&to)?;
 
-                    let glossaries = glossary::read_glossary(
-                        input,
-                        from_lang.as_langcode(),
-                        to_lang.as_langcode(),
-                    )
-                    .unwrap();
+                    let glossaries = glossary::read_glossary(&name, input).unwrap();
 
                     let glossary = deepl
                         .unwrap()

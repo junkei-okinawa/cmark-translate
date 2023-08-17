@@ -3,6 +3,9 @@
 //! DeepL REST API wrapper
 //!
 
+use std::collections::{BTreeMap, HashMap};
+
+#[derive(Debug, Clone)]
 pub struct Deepl {
     config: DeeplConfig,
 }
@@ -115,10 +118,30 @@ impl Deepl {
             ),
             ("non_splitting_tags", "embed,em,strong,del,a,img"),
         ];
-        if let Some(glossary_id) = self.config.glossary(from_lang, to_lang) {
+
+        let glossaries = self.list_glossaries().await.unwrap();
+        let glossary_map = glossaries
+            .into_iter()
+            .map(|x| (x.name.clone(), x))
+            .collect::<BTreeMap<_, _>>();
+
+        let glossary_id = if glossary_map.contains_key("internet_computer") {
+            glossary_map
+                .get("internet_computer")
+                .unwrap()
+                .glossary_id
+                .clone()
+        } else {
+            "".to_string()
+        };
+        if glossary_id != "".to_string() {
+            println!("Use glossary {}", glossary_id);
             log::debug!("Use glossary {}", glossary_id);
-            params.push(("glossary_id", glossary_id));
+            params.push(("glossary_id", glossary_id.as_str().clone()));
         }
+
+        // if let Some(glossary_id) = self.config.glossary(from_lang, to_lang) {
+        // }
         params.push(("text", xml_body));
 
         // Make DeepL API request
@@ -372,11 +395,11 @@ impl std::str::FromStr for Formality {
     }
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "snake_case")]
 struct DeeplConfig {
     api_key: String,
-    glossaries: std::collections::HashMap<String, String>,
+    glossaries: HashMap<String, HashMap<String, String>>,
 }
 
 impl DeeplConfig {
@@ -442,7 +465,12 @@ impl DeeplConfig {
     // Find glossary
     fn glossary<'a>(&'a self, from_lang: Language, to_lang: Language) -> Option<&'a str> {
         let glossary_key = format!("{}_{}", from_lang.as_langcode(), to_lang.as_langcode());
-        self.glossaries.get(&glossary_key).map(|v| v.as_str())
+        for (_key, value) in &self.glossaries {
+            if !value.get(&glossary_key).is_none() {
+                return value.get(&glossary_key).map(|v| v.as_str());
+            };
+        }
+        None
     }
 }
 

@@ -35,6 +35,11 @@ pub async fn translate_cmark_file<P: AsRef<std::path::Path>>(
     let translated_cmark =
         translate_cmark(&deepl, from_lang, to_lang, formality, &cmark_text).await?;
 
+    // create output directory
+    if let Some(parent) = dst_path.as_ref().parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
     // Print result
     let mut f = std::fs::File::create(dst_path)?;
     if let Some(translated_frontmatter) = translated_frontmatter {
