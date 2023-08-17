@@ -2,8 +2,12 @@ mod cmark_xml;
 mod deepl;
 mod glossary;
 mod trans;
+mod walkdir;
+
+use std::path::PathBuf;
 
 use clap::{CommandFactory, Parser};
+use walkdir::WalkDir;
 
 #[derive(clap::Parser)]
 #[command(author, version, about, long_about = None)]
@@ -30,9 +34,9 @@ enum Commands {
         #[arg(long)]
         formality: Option<String>,
         /// Input CommonMark file
-        input: std::path::PathBuf,
+        input: String,
         /// Output translated CommonMark file
-        output: std::path::PathBuf,
+        output: String,
     },
     /// Manage glossaries
     Glossary {
@@ -103,30 +107,60 @@ async fn main() -> std::io::Result<()> {
                 deepl::Formality::from_str(&f)
             })?;
 
-            let is_dir_input = input.is_dir();
-            let is_dir_output = output.extension().is_none();
+            let input_path = PathBuf::from(&input);
+            let input_output = PathBuf::from(&output);
+            let is_dir_input = input_path.is_dir();
+            let is_dir_output = input_output.extension().is_none();
             if is_dir_input != is_dir_output {
                 panic!("Input and output should be both directory or file");
             }
             let files = if is_dir_input {
-                let mut files = vec![];
-                for entry in std::fs::read_dir(&input)? {
-                    let entry = entry?;
-                    let path = entry.path();
-                    if path.is_file() && path.extension().unwrap() == "md" {
-                        let translate_output = output.clone().join(path.file_name().unwrap());
-                        files.push((path, translate_output));
-                    }
-                }
+                // return 用の Vecを生成
+                let mut files = Vec::new();
+                // 後続処理で使用するOSのPath区切り文字を取得
+                let sep = std::path::MAIN_SEPARATOR.to_string();
+
+                // inputディレクトリから再起的に .md ファイルを取得
+                let _paths = WalkDir::new(&input)
+                    .unwrap()
+                    .filter_map(|e| {
+                        let file_path = e.unwrap().path();
+                        if file_path.extension().is_some() && file_path.extension().unwrap() == "md"
+                        {
+                            let file_path_string =
+                                file_path.into_os_string().into_string().unwrap();
+
+                            // file_path を取得し output 用の file_path を生成する。
+                            // path_join_string の先頭文字列がOSの separator文字列だと、
+                            // 後続の Path の join で path_join_string だけが有効になってしまうので
+                            // 先頭の separator文字列は削除する。
+                            let mut path_join_string = file_path_string.replacen(&input, "", 1);
+                            path_join_string =
+                                if path_join_string.chars().nth(0).unwrap().to_string() == sep {
+                                    path_join_string.replacen(&sep, "", 1)
+                                } else {
+                                    path_join_string
+                                };
+
+                            files.push((
+                                PathBuf::from(&file_path_string),
+                                PathBuf::from(&output).join(path_join_string),
+                            ));
+                        }
+                        Some(())
+                    })
+                    .collect::<Vec<_>>();
                 files
             } else {
-                vec![(input, output.clone())]
+                vec![(input_path, input_output.clone())]
             };
 
             let res = files
                 .iter()
                 .map(|i| async move {
                     let (input, output) = i;
+                    println!("input  : {:?}", input);
+                    println!("output : {:?}", output);
                     // Reload DeepL config
                     let deepl = deepl_with_config().await;
                     // run translation
