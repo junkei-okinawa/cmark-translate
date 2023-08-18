@@ -72,7 +72,7 @@ note: "internet_computer"以外のglossary名で辞書登録も可能ですが�
 
 ```bash
 # --name: 登録対象の辞書名。toml内に記載がない場合はエラーになって登録できません
-# -f, --from: 翻訳元の言語,選択可能な言語は***参照。
+# -f, --from: 翻訳元の言語,選択可能な言語は Appendix 参照。
 # -t, --to: 翻訳後の言語, 選択可能な言語はfromと同じ。
 # input: 読み込み対象のtomlファイルのパスを指定。
 
@@ -103,8 +103,10 @@ cargo run -- glossary register --name "internet_computer" -f en -t ja ./deepl.to
 
 ```bash
 # --formality: formal（敬称） or informal（親称）。　指定しない場合は default が使用される
-# -f, --from: 
-# -t, --to: 
+# -f, --from: 翻訳元の言語,選択可能な言語は Appendix 参照。
+# -t, --to: 翻訳後の言語, 選択可能な言語はfromと同じ。
+# -m, --max-depth: input がフォルダの場合、処理するフォルダ階層の深さを指定。
+#                  デフォルトは usize::Max なので、フォルダ階層の考え方では無制限と同様の認識で良い。
 # input: ファイル、またはフォルダのパスを指定。フォルダを指定した場合は .md の拡張子ファイルのみを翻訳対象とします。
 # output: ファイル、またはフォルダのパスを指定。
 #         inputがファイルの場合はファイルを、フォルダの場合はフォルダを指定しないとエラーで停止するします。

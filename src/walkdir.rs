@@ -1,61 +1,66 @@
-use std::fs::{self, DirEntry};
-use std::io;
-use std::path::Path;
+use std::path::PathBuf;
 
-pub struct WalkDir {
-    root: Box<dyn Iterator<Item = io::Result<DirEntry>>>,
-    children: Box<dyn Iterator<Item = WalkDir>>,
+use regex::Regex;
+use walkdir::{DirEntry, WalkDir};
+
+fn is_hidden(entry: &DirEntry) -> bool {
+    entry
+        .file_name()
+        .to_str()
+        .map(|s| s.starts_with("."))
+        .unwrap_or(false)
 }
 
-impl WalkDir {
-    pub fn new<P: AsRef<Path>>(path: P) -> io::Result<Self> {
-        let root = Box::new(fs::read_dir(&path)?);
-        let children = Box::new(fs::read_dir(&path)?.filter_map(|e| {
-            let e = e.ok()?;
-            if e.file_type().ok()?.is_dir() {
-                return Some(WalkDir::new(e.path()).ok()?);
+fn check_extension(entry: &DirEntry) -> bool {
+    // TODO: 呼び出し元のコマンドライン引数で、翻訳対象の拡張子を指定できるようにする
+    let ext = Some(vec!["md"]);
+    if ext.is_none() {
+        true
+    } else {
+        let ext = ext.unwrap();
+        let ext = ext.iter().map(|e| e.to_string()).collect::<Vec<String>>();
+        let ext = ext.join("|");
+        let ext = format!(".*\\.({})$", ext);
+        let ext = Regex::new(&ext).unwrap();
+        entry
+            .file_name()
+            .to_str()
+            .map(|s| ext.is_match(s))
+            .unwrap_or(false)
+    }
+}
+
+pub fn new(
+    path: PathBuf,
+    max_depth: usize,
+    // ext: Option<Vec<&str>>,
+    hidden: bool,
+) -> Vec<PathBuf> {
+    println!("start walkdir!!! path : {:?}", path);
+    let walkdir = WalkDir::new(path).max_depth(max_depth).into_iter();
+    println!("walkdir : {:?}", walkdir);
+
+    walkdir
+        .filter_map(|e| e.ok())
+        .map(|e| {
+            if (!hidden && is_hidden(&e)) || !check_extension(&e) {
+                return Err("");
             }
-            None
-        }));
-        Ok(WalkDir { root, children })
-    }
-
-    pub fn entries(self) -> Box<dyn Iterator<Item = io::Result<DirEntry>>> {
-        Box::new(
-            self.root
-                .chain(self.children.map(|s| s.entries()).flatten()),
-        )
-    }
+            Ok(e.into_path())
+        })
+        .filter_map(|e| e.ok())
+        .collect::<Vec<_>>()
 }
 
-impl Iterator for WalkDir {
-    type Item = io::Result<DirEntry>;
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(item) = self.root.next() {
-            return Some(item);
-        }
-        if let Some(child) = self.children.next() {
-            self.root = child.entries();
-            return self.next();
-        }
-        None
-    }
-}
+// mod test {
+//     use super::*;
 
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn _test_visit_dir() {
-        let paths = WalkDir::new("./src")
-            .unwrap()
-            .filter_map(|e| Some(e.ok()?.path()))
-            .collect::<Vec<_>>();
-        let test_path = std::path::PathBuf::new().join("./src/lib.rs");
-        let mut test_paths = Vec::new();
-        test_paths.push(test_path);
-
-        assert_eq!(&paths, &test_paths);
-    }
-}
+//     #[test]
+//     fn test_walkdir() {
+//         let path = PathBuf::from(".");
+//         let max_depth = 100;
+//         let hidden = false;
+//         let paths = new(path, max_depth, hidden);
+//         println!("paths : {:?}", paths);
+//     }
+// }
