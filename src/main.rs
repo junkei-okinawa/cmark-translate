@@ -41,7 +41,8 @@ enum Commands {
         #[arg(short, long)]
         max_depth: Option<usize>,
         /// Output translated CommonMark file
-        output: String,
+        #[arg(short, long)]
+        output: Option<String>,
     },
     /// Manage glossaries
     Glossary {
@@ -113,6 +114,7 @@ async fn main() -> std::io::Result<()> {
                 deepl::Formality::from_str(&f)
             })?;
             let max_depth = max_depth.unwrap_or(usize::MAX);
+            let output = output.unwrap_or(input.clone());
             let sep = std::path::MAIN_SEPARATOR.to_string();
 
             let input_path = PathBuf::from(&input);

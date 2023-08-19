@@ -104,14 +104,18 @@ cargo run -- glossary register --name "internet_computer" -f en -t ja ./deepl.to
 ```bash
 # --formality: formal（敬称） or informal（親称）。　指定しない場合は default が使用される
 # -f, --from: 翻訳元の言語,選択可能な言語は Appendix 参照。
+#
 # -t, --to: 翻訳後の言語, 選択可能な言語はfromと同じ。
+#
 # -m, --max-depth: input がフォルダの場合、処理するフォルダ階層の深さを指定。
 #                  デフォルトは usize::Max なので、フォルダ階層の考え方では無制限と同様の認識で良い。
-# input: ファイル、またはフォルダのパスを指定。フォルダを指定した場合は .md の拡張子ファイルのみを翻訳対象とします。
-# output: ファイル、またはフォルダのパスを指定。
+#
+# -o, --output: ファイル、またはフォルダのパスを指定。指定しない場合はinputに上書きする。
 #         inputがファイルの場合はファイルを、フォルダの場合はフォルダを指定しないとエラーで停止するします。
 #         存在しないフォルダを指定した場合は、フォルダを生成して出力ファイルを格納します。
 #         フォルダを指定した場合はinputのファイル群と同じファイル名で出力します。
+#
+# input: ファイル、またはフォルダのパスを指定。フォルダを指定した場合は .md の拡張子ファイルのみを翻訳対象とします。
 
 cargo run --  translate --formality formal -f en -t ja ./portal/docs/concepts ./target/portal
 # -> 翻訳したファイル１つに対して、以下のような1行分のレコードが出力されます。
