@@ -48,6 +48,9 @@ pub async fn translate_cmark_file<P: AsRef<std::path::Path>>(
         f.write_all("+++\n".as_bytes())?;
     }
     f.write_all(translated_cmark.as_bytes())?;
+    f.write_all("\n<!---\n".as_bytes())?;
+    f.write_all(cmark_text.as_bytes())?;
+    f.write_all("\n-->\n".as_bytes())?;
     Ok(())
 }
 
