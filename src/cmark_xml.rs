@@ -11,11 +11,17 @@ const NS: &str = "markdown";
 /// Returns tuple, (CommonMark body, frontmatter)
 pub fn read_cmark_with_frontmatter<R: std::io::Read>(
     reader: &mut R,
+    src_path: &std::path::Path,
 ) -> std::io::Result<(String, Option<String>)> {
     let mut buf = String::new();
     reader.read_to_string(&mut buf)?;
 
-    if buf.starts_with("+++") {
+    if src_path.extension().is_some()
+        && (src_path.extension().unwrap() == "md" || src_path.extension().unwrap() == "mdx")
+    {
+        // Markdown file
+        Ok((buf, None))
+    } else if buf.starts_with("+++") {
         // TOML frontmatter
         split_frontmatter(&buf, "+++")
     } else if buf.starts_with("---") {

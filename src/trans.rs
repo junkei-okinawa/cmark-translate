@@ -13,8 +13,9 @@ pub async fn translate_cmark_file<P: AsRef<std::path::Path>>(
     use std::io::Write;
 
     // Read .md file
-    let mut f = std::fs::File::open(src_path)?;
-    let (cmark_text, frontmatter) = cmark_xml::read_cmark_with_frontmatter(&mut f)?;
+    let mut f = std::fs::File::open(&src_path)?;
+    let (cmark_text, frontmatter) =
+        cmark_xml::read_cmark_with_frontmatter(&mut f, &src_path.as_ref())?;
     drop(f);
 
     log::trace!(
@@ -41,7 +42,7 @@ pub async fn translate_cmark_file<P: AsRef<std::path::Path>>(
     }
 
     // Print result
-    let mut f = std::fs::File::create(dst_path)?;
+    let mut f = std::fs::File::create(&dst_path)?;
     if let Some(translated_frontmatter) = translated_frontmatter {
         f.write_all("+++\n".as_bytes())?;
         f.write_all(translated_frontmatter.as_bytes())?;
