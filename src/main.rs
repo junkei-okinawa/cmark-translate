@@ -169,6 +169,7 @@ async fn main() -> std::io::Result<()> {
                     let (input, output) = i;
                     // Reload DeepL config
                     let deepl = deepl_with_config().await;
+
                     // run translation
                     let _res = trans::translate_cmark_file(
                         &deepl.unwrap(),

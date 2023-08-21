@@ -11,25 +11,32 @@ pub async fn translate_cmark_file<P: AsRef<std::path::Path>>(
     dst_path: P,
 ) -> std::io::Result<()> {
     use std::io::Write;
+    log::debug!("start translate. input: {}", &src_path.as_ref().display());
 
     // Read .md file
     let mut f = std::fs::File::open(&src_path)?;
-    let (cmark_text, frontmatter) =
-        cmark_xml::read_cmark_with_frontmatter(&mut f, &src_path.as_ref())?;
+    let (cmark_text, delimiter, frontmatter) = cmark_xml::read_cmark_with_frontmatter(&mut f)?;
     drop(f);
 
-    log::trace!(
-        "Read file:\n+++\n{}\n+++\n{}",
+    log::debug!(
+        "Read file:\n+++\n{}\n+++\n{}\n+++\n{}",
+        delimiter,
         frontmatter.as_deref().unwrap_or_default(),
         cmark_text
     );
 
-    // Parse frontmatter
-    let translated_frontmatter = if let Some(frontmatter) = frontmatter {
-        // translate TOML frontmatter
-        Some(translate_toml(&deepl, from_lang, to_lang, formality, &frontmatter).await?)
-    } else {
-        None
+    let is_md_file = src_path.as_ref().extension().is_some()
+        && (src_path.as_ref().extension().unwrap() == "md"
+            || src_path.as_ref().extension().unwrap() == "mdx");
+
+    // Parse frontmatter. For Markdown files, do not translate front matter.
+    let translated_frontmatter = match frontmatter {
+        Some(frontmatter) if !is_md_file => {
+            // translate TOML frontmatter
+            Some(translate_toml(&deepl, from_lang, to_lang, formality, &frontmatter).await?)
+        }
+        Some(frontmatter) => Some(frontmatter),
+        _ => None,
     };
 
     // Translate CommonMark body
@@ -44,9 +51,9 @@ pub async fn translate_cmark_file<P: AsRef<std::path::Path>>(
     // Print result
     let mut f = std::fs::File::create(&dst_path)?;
     if let Some(translated_frontmatter) = translated_frontmatter {
-        f.write_all("+++\n".as_bytes())?;
+        f.write_all(format!("{}{}", delimiter, "\n").as_bytes())?;
         f.write_all(translated_frontmatter.as_bytes())?;
-        f.write_all("+++\n".as_bytes())?;
+        f.write_all(format!("{}{}", delimiter, "\n").as_bytes())?;
     }
     f.write_all(translated_cmark.as_bytes())?;
     f.write_all("\n<!---\n".as_bytes())?;

@@ -11,37 +11,43 @@ const NS: &str = "markdown";
 /// Returns tuple, (CommonMark body, frontmatter)
 pub fn read_cmark_with_frontmatter<R: std::io::Read>(
     reader: &mut R,
-    src_path: &std::path::Path,
-) -> std::io::Result<(String, Option<String>)> {
+) -> std::io::Result<(String, String, Option<String>)> {
+    log::debug!("start read_cmark_with_frontmatter.");
     let mut buf = String::new();
+    let mut delimiter = String::new();
     reader.read_to_string(&mut buf)?;
 
-    if src_path.extension().is_some()
-        && (src_path.extension().unwrap() == "md" || src_path.extension().unwrap() == "mdx")
-    {
-        // Markdown file
-        Ok((buf, None))
-    } else if buf.starts_with("+++") {
+    if buf.starts_with("+++") {
         // TOML frontmatter
-        split_frontmatter(&buf, "+++")
+        delimiter = String::from("+++");
+        log::debug!("delimiter. {}", &delimiter);
+        split_frontmatter(&buf, delimiter)
     } else if buf.starts_with("---") {
-        // YAML frontmatter
-        split_frontmatter(&buf, "---")
+        delimiter = String::from("---");
+        log::debug!("delimiter. {}", &delimiter);
+        split_frontmatter(&buf, delimiter)
     } else {
         // No frontmatter, only CommonMark body
-        Ok((buf, None))
+        Ok((buf, delimiter, None))
     }
 }
 
 /// Split frontmatter and CommonMark body
-fn split_frontmatter(filebody: &str, delimiter: &str) -> std::io::Result<(String, Option<String>)> {
-    let mut iter = filebody.splitn(3, delimiter);
+fn split_frontmatter(
+    filebody: &str,
+    delimiter: String,
+) -> std::io::Result<(String, String, Option<String>)> {
+    let mut iter = filebody.splitn(3, delimiter.as_str());
     let _ = iter.next(); // should empty
     let frontmatter = iter.next();
     let cmark_body = iter.next();
 
     if let (Some(frontmatter), Some(cmark_body)) = (frontmatter, cmark_body) {
-        Ok((cmark_body.to_string(), Some(frontmatter.to_string())))
+        Ok((
+            cmark_body.to_string(),
+            delimiter,
+            Some(frontmatter.to_string()),
+        ))
     } else {
         // second delimiter can not be found.
         Err(std::io::Error::from(std::io::ErrorKind::UnexpectedEof))
