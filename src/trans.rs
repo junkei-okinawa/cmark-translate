@@ -27,7 +27,9 @@ pub async fn translate_cmark_file<P: AsRef<std::path::Path>>(
     // Parse frontmatter
     let translated_frontmatter = if let Some(frontmatter) = frontmatter {
         // translate TOML frontmatter
-        Some(translate_toml(&deepl, from_lang, to_lang, formality, &frontmatter).await?)
+        // Some(translate_toml(&deepl, from_lang, to_lang, formality, &frontmatter).await?)
+        // front matter は翻訳しない
+        Some(frontmatter)
     } else {
         None
     };
@@ -44,9 +46,9 @@ pub async fn translate_cmark_file<P: AsRef<std::path::Path>>(
     // Print result
     let mut f = std::fs::File::create(&dst_path)?;
     if let Some(translated_frontmatter) = translated_frontmatter {
-        f.write_all("+++\n".as_bytes())?;
+        f.write_all("---\n".as_bytes())?;
         f.write_all(translated_frontmatter.as_bytes())?;
-        f.write_all("+++\n".as_bytes())?;
+        f.write_all("---\n".as_bytes())?;
     }
     f.write_all(translated_cmark.as_bytes())?;
     f.write_all("\n<!---\n".as_bytes())?;

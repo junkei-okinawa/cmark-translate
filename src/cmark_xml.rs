@@ -20,13 +20,14 @@ pub fn read_cmark_with_frontmatter<R: std::io::Read>(
         && (src_path.extension().unwrap() == "md" || src_path.extension().unwrap() == "mdx")
     {
         // Markdown file
-        Ok((buf, None))
+        if buf.starts_with("---") {
+            split_frontmatter(&buf, "---")
+        } else {
+            Ok((buf, None))
+        }
     } else if buf.starts_with("+++") {
         // TOML frontmatter
         split_frontmatter(&buf, "+++")
-    } else if buf.starts_with("---") {
-        // YAML frontmatter
-        split_frontmatter(&buf, "---")
     } else {
         // No frontmatter, only CommonMark body
         Ok((buf, None))
