@@ -104,6 +104,7 @@ impl Deepl {
         formality: Formality,
         xml_body: &str,
     ) -> reqwest::Result<String> {
+        // TODO: ignore_tags, splitting_tags, non_splitting_tags
         // Prepare request parameters
         let mut params = vec![
             ("source_lang", from_lang.as_langcode()),
@@ -400,6 +401,7 @@ impl std::str::FromStr for Formality {
 struct DeeplConfig {
     api_key: String,
     glossaries: HashMap<String, HashMap<String, String>>,
+    ignores: Option<HashMap<String, Vec<String>>>,
 }
 
 impl DeeplConfig {

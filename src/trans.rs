@@ -19,7 +19,7 @@ pub async fn translate_cmark_file<P: AsRef<std::path::Path>>(
     drop(f);
 
     log::debug!(
-        "Read file:\n+++\n{}\n+++\n{}\n+++\n{}",
+        "Read file:\n+++\ndelimiter: {}\n+++\nfrontmatter: {}\n+++\n{}",
         delimiter,
         frontmatter.as_deref().unwrap_or_default(),
         cmark_text
