@@ -111,7 +111,7 @@ impl Deepl {
             ("preserve_formatting", "1"),
             ("formality", formality.to_str()),
             ("tag_handling", "xml"),
-            ("ignore_tags", "header,embed,object"),
+            ("ignore_tags", "header,embed,object,pre"),
             (
                 "splitting_tags",
                 "blockquote,li,dt,dd,p,h1,h2,h3,h4,h5,h6,th,td",
