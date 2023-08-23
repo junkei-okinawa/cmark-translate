@@ -1,22 +1,27 @@
 api_key = "your_DeepL_api_key"
 
 [glossaries.internet_computer]
-"Internet Computer" = "Internet Computer"
-"internet computer" = "internet computer"
-"Internet Computer Protocol" = "Internet Computer Protocol"
-"internet computer protocol" = "internet computer protocol"
 "query call" = "クエリーコール"
 "update call" = "アップデートコール"
-"actor" = "actor"
-"Actor" = "Actor"
-"canister" = "canister"
-"canisters" = "canisters"
-"Canister" = "canister"
-"Canisters" = "canisters"
 "minting" = "発行"
 "standard" = "規格"
 "burn" = "バーン"
-"dapp" = "Dapp"
 "Architecture" = "アーキテクチャ"
 "state" = "ステート"
 "principal" = "プリンシパル"
+
+[ignores]
+# ignoreグループ名 = [単語, 単語, ...]
+internet_computer = [
+  "Internet Computer( Protocol)?",
+  "Actor",
+  "Canister(s)?",
+  "Dapp(s)?",
+  "cycle(s)?",
+  "Dfinity",
+  "Discord",
+  "Motoko",
+  "Network Nervous System",
+  "Neuron",
+  "WebAssembly",
+]

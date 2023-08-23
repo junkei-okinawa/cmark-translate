@@ -5,6 +5,9 @@
 
 use std::collections::{BTreeMap, HashMap};
 
+use regex::Regex;
+// use regex::Replacer;
+
 #[derive(Debug, Clone)]
 pub struct Deepl {
     config: DeeplConfig,
@@ -104,7 +107,10 @@ impl Deepl {
         formality: Formality,
         xml_body: &str,
     ) -> reqwest::Result<String> {
+        let target_name = "internet_computer";
         // TODO: ignore_tags, splitting_tags, non_splitting_tags
+        let ignore_tags = "header,embed,object,pre,code,style,script,ignore-tag";
+
         // Prepare request parameters
         let mut params = vec![
             ("source_lang", from_lang.as_langcode()),
@@ -112,7 +118,7 @@ impl Deepl {
             ("preserve_formatting", "1"),
             ("formality", formality.to_str()),
             ("tag_handling", "xml"),
-            ("ignore_tags", "header,embed,object,pre"),
+            ("ignore_tags", ignore_tags),
             (
                 "splitting_tags",
                 "blockquote,li,dt,dd,p,h1,h2,h3,h4,h5,h6,th,td",
@@ -126,7 +132,7 @@ impl Deepl {
             .map(|x| (x.name.clone(), x))
             .collect::<BTreeMap<_, _>>();
 
-        let glossary_id = if glossary_map.contains_key("internet_computer") {
+        let glossary_id = if glossary_map.contains_key(target_name) {
             glossary_map
                 .get("internet_computer")
                 .unwrap()
@@ -140,10 +146,13 @@ impl Deepl {
             log::debug!("Use glossary {}", glossary_id);
             params.push(("glossary_id", glossary_id.as_str().clone()));
         }
+        log::trace!("****** before xml_body: {}", xml_body);
 
-        // if let Some(glossary_id) = self.config.glossary(from_lang, to_lang) {
-        // }
-        params.push(("text", xml_body));
+        // let ignores = &self.config.ignores;
+        let xml_body = Self::add_ignore_tags(self, target_name, xml_body).await;
+
+        log::trace!("!!!!!! after xml_body: {}", xml_body);
+        params.push(("text", &xml_body));
 
         // Make DeepL API request
         let client = reqwest::Client::new();
@@ -167,6 +176,31 @@ impl Deepl {
         } else {
             // Empty response
             Ok(String::new())
+        }
+    }
+
+    pub async fn add_ignore_tags(&self, target_name: &str, xml_body: &str) -> String {
+        let ignores = &self.config.ignores;
+        match ignores {
+            Some(ignores) => match ignores.get(target_name) {
+                Some(ignore_trans_words) => {
+                    let mut ignore_trans_words = ignore_trans_words.clone();
+                    ignore_trans_words.sort_by(|a, b| b.len().cmp(&a.len()));
+                    let replaced_xml_body =
+                        ignore_trans_words
+                            .iter()
+                            .fold(xml_body.clone().to_owned(), |acc, w| {
+                                let re = Regex::new(&format!(r"(?i){}", w)).unwrap();
+                                re.replace_all(&acc, |caps: &regex::Captures| {
+                                    format!("<ignore-tag>{}</ignore-tag>", &caps[0])
+                                })
+                                .to_string()
+                            });
+                    replaced_xml_body
+                }
+                None => xml_body.to_string(),
+            },
+            None => xml_body.to_string(),
         }
     }
 
