@@ -190,7 +190,7 @@ impl Deepl {
                         ignore_trans_words
                             .iter()
                             .fold(xml_body.clone().to_owned(), |acc, w| {
-                                let re = Regex::new(&format!(r"(?i){}", w)).unwrap();
+                                let re = Regex::new(&format!(r###"(?i){}"###, w)).unwrap();
                                 re.replace_all(&acc, |caps: &regex::Captures| {
                                     format!("<ignore-tag>{}</ignore-tag>", &caps[0])
                                 })
