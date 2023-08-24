@@ -148,7 +148,7 @@ pub async fn translate_cmark(
         .unwrap();
 
     // write back to markdown format
-    log::trace!("Translated XML: {}\n", xml);
+    log::trace!("Translated XML: {}\n", &xml_translated);
     let cmark_translated = cmark_xml::cmark_from_xml(&xml_translated, true).unwrap();
 
     Ok(cmark_translated)
