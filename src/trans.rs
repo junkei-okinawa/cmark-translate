@@ -141,15 +141,32 @@ pub async fn translate_cmark(
     let xml = cmark_xml::xml_from_cmark(&cmark_text, true);
     log::trace!("XML: {}\n", xml);
 
+    let target_name = "internet_computer";
+    let xml = deepl::Deepl::add_ignore_tags(deepl, target_name, &xml).await;
+
+    log::trace!("111111 added ignore tags. XML: {}\n", xml);
+
     // translate
     let xml_translated = deepl
-        .translate_xml(from_lang, to_lang, formality, &xml)
+        .translate_xml(from_lang, to_lang, formality, target_name, &xml)
         .await
         .unwrap();
 
     // write back to markdown format
-    log::trace!("Translated XML: {}\n", &xml_translated);
+    log::trace!(
+        "222222 Translated XML(before remove ignore tags): {}\n",
+        &xml_translated
+    );
+
+    let xml_translated = deepl::Deepl::remove_ignore_tags(deepl, &xml_translated).await;
+    log::trace!(
+        "333333 Translated XML(after remove ignore tags): {}\n",
+        &xml_translated
+    );
+
     let cmark_translated = cmark_xml::cmark_from_xml(&xml_translated, true).unwrap();
+
+    log::trace!("444444 cmark_translated: {}\n", &cmark_translated);
 
     Ok(cmark_translated)
 }

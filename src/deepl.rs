@@ -105,9 +105,9 @@ impl Deepl {
         from_lang: Language,
         to_lang: Language,
         formality: Formality,
+        target_name: &str,
         xml_body: &str,
     ) -> reqwest::Result<String> {
-        let target_name = "internet_computer";
         // TODO: ignore_tags, splitting_tags, non_splitting_tags
         let ignore_tags = "header,embed,object,pre,code,style,script,ignore-tag";
 
@@ -146,12 +146,7 @@ impl Deepl {
             log::debug!("Use glossary {}", glossary_id);
             params.push(("glossary_id", glossary_id.as_str().clone()));
         }
-        log::trace!("****** before xml_body: {}", xml_body);
 
-        // let ignores = &self.config.ignores;
-        let xml_body = Self::add_ignore_tags(self, target_name, xml_body).await;
-
-        log::trace!("!!!!!! after xml_body: {}", xml_body);
         params.push(("text", &xml_body));
 
         // Make DeepL API request
@@ -202,6 +197,11 @@ impl Deepl {
             },
             None => xml_body.to_string(),
         }
+    }
+
+    pub async fn remove_ignore_tags(&self, body: &str) -> String {
+        let re = Regex::new(r###"(<ignore-tag>|</ignore-tag>)"###).unwrap();
+        re.replace_all(&body, "").to_string()
     }
 
     /// Register new glossary
