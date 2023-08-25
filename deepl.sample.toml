@@ -16,7 +16,7 @@ internet_computer = [
   "Internet Computer( Protocol)?",
   "Actor",
   "Canister(s)?",
-  "Dapp(s)?",
+  "Dapp(’)?(s)?",
   "cycle(s)?",
   "Dfinity",
   "Discord",
