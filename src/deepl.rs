@@ -3,14 +3,14 @@
 //! DeepL REST API wrapper
 //!
 
+use regex::Regex;
 use std::collections::{BTreeMap, HashMap};
 
-use regex::Regex;
-// use regex::Replacer;
+pub const MAX_TRANSLATE_LENGTH: usize = 500_000;
 
 #[derive(Debug, Clone)]
 pub struct Deepl {
-    config: DeeplConfig,
+    pub config: DeeplConfig,
 }
 
 impl Deepl {
@@ -432,7 +432,7 @@ impl std::str::FromStr for Formality {
 
 #[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
 #[serde(rename_all = "snake_case")]
-struct DeeplConfig {
+pub struct DeeplConfig {
     api_key: String,
     glossaries: HashMap<String, HashMap<String, String>>,
     ignores: Option<HashMap<String, Vec<String>>>,
@@ -489,13 +489,18 @@ impl DeeplConfig {
 
     // DeepL endpoint URL
     fn endpoint(&self, api: &str) -> String {
-        if self.api_key.ends_with(":fx") {
+        if self.is_free_api_key() {
             // API free plan key
             format!("https://api-free.deepl.com/v2/{}", api)
         } else {
             // API Pro key
             format!("https://api.deepl.com/v2/{}", api)
         }
+    }
+
+    // Check API key is free plan
+    pub fn is_free_api_key(&self) -> bool {
+        self.api_key.ends_with(":fx")
     }
 
     // Find glossary
@@ -556,22 +561,87 @@ struct DeeplUsageResponse {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
 
+    // DeeplConfig::with_config 関数のテスト
+    #[test]
+    fn test_deepl_config_with_config() {
+        let deepl_config = DeeplConfig::with_config("deepl.toml");
+        assert!(deepl_config.is_ok());
+    }
+
+    // Deepl::with_config 関数のテスト
     #[tokio::test]
-    async fn plain_text_translation() {
-        let deepl = Deepl::new().unwrap();
+    async fn test_deepl_with_config() {
+        let deepl = Deepl::with_config("deepl.toml");
+        assert!(deepl.is_ok());
+    }
+
+    // Deepl::translate 関数のテスト
+    #[tokio::test]
+    async fn test_deepl_translate() {
+        let deepl = Deepl::with_config("deepl.toml").unwrap();
 
         let resp = deepl
             .translate(
                 Language::En,
-                Language::De,
+                Language::Ja,
                 Formality::Default,
                 "Hello, World!",
             )
-            .await
-            .unwrap();
-        assert_eq!(&resp, "Hallo, Welt!");
+            .await;
+
+        // API使用上限に達している場合はエラーになる
+        assert!(resp.is_ok());
+        let translation = resp.unwrap();
+        assert_eq!(translation, "こんにちは、世界！");
+    }
+
+    // Deepl::list_glossaries 関数のテスト
+    #[tokio::test]
+    async fn test_deepl_list_glossaries() {
+        let deepl = Deepl::with_config("deepl.toml").unwrap();
+
+        let glossaries = deepl.list_glossaries().await;
+        assert!(glossaries.is_ok());
+    }
+
+    // Deepl::register_glossaries 関数のテスト
+    #[tokio::test]
+    async fn test_deepl_register_glossaries() {
+        let deepl = Deepl::with_config("deepl.toml").unwrap();
+        let glossary_name = "test_glossary";
+        let glossaries = vec![("word1", "translation1"), ("word2", "translation2")];
+
+        let result = deepl
+            .register_glossaries(glossary_name, Language::En, Language::Ja, &glossaries)
+            .await;
+
+        assert!(result.is_ok());
+        let glossary = result.unwrap();
+        assert_eq!(glossary.name, glossary_name);
+    }
+
+    // Deepl::remove_glossary 関数のテスト
+    #[tokio::test]
+    async fn test_deepl_remove_glossary() {
+        let deepl = Deepl::with_config("deepl.toml").unwrap();
+
+        let glossaries = deepl.list_glossaries().await.unwrap();
+        if let Some(glossary) = glossaries.first() {
+            let removal_result = deepl.remove_glossary(&glossary.glossary_id).await;
+            assert!(removal_result.is_ok());
+        }
+    }
+
+    // Deepl::get_usage 関数のテスト
+    #[tokio::test]
+    async fn test_deepl_get_usage() {
+        let deepl = Deepl::with_config("deepl.toml").unwrap();
+
+        let usage = deepl.get_usage().await;
+        assert!(usage.is_ok());
+        assert!(usage.unwrap() >= 0);
     }
 }

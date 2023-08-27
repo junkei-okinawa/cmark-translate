@@ -54,3 +54,54 @@ pub fn read_glossary<P: AsRef<std::path::Path>>(
         Err(e) => panic!("fail to parse toml: {}", e),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{path::PathBuf, thread::sleep, time::Duration};
+
+    // Helper function to create a temporary file with the given content
+    fn create_temp_file(content: &str) -> (PathBuf, PathBuf) {
+        let tests_dir = PathBuf::from("./tests");
+        let test_file_path = tests_dir.as_path().join("test.toml");
+        std::fs::write(&test_file_path, content).unwrap();
+        (tests_dir, test_file_path)
+    }
+
+    #[test]
+    fn test_read_file() {
+        // Create a temporary file with content
+        let content = "Hello, this is a test content.";
+        let (_, test_file_path) = create_temp_file(content);
+
+        // Call the function to be tested
+        let result = read_file(&test_file_path);
+
+        // Check if the result matches the expected content
+        assert_eq!(result, Ok(content.to_string()));
+    }
+
+    #[test]
+    fn test_read_glossary() {
+        // To use the same file for multiple tests. Delay processing to avoid errors caused by replacing content in files.
+        sleep(Duration::from_secs(1));
+
+        // Prepare test TOML content with glossary
+        let toml_content = r#"
+[glossaries]
+colors = { "red" = "赤", "blue" = "青" }
+numbers = { "one" = "一", "two" = "二" }
+"#;
+        let (_tests_dir, test_file_path) = create_temp_file(toml_content);
+
+        // Call the function to be tested
+        let result = read_glossary("colors", &test_file_path);
+
+        // Check if the result matches the expected glossary entries
+        let expected_glossary = vec![
+            ("blue".to_string(), "青".to_string()),
+            ("red".to_string(), "赤".to_string()),
+        ];
+        assert_eq!(result.unwrap(), expected_glossary);
+    }
+}

@@ -542,3 +542,74 @@ fn comrak_options() -> comrak::ComrakOptions {
         },
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use minidom::Element;
+    use std::io::Cursor;
+
+    #[test]
+    fn test_read_cmark_with_frontmatter_no_frontmatter() {
+        let cmark_text = "This is a test";
+        let mut reader = Cursor::new(cmark_text);
+        let result = read_cmark_with_frontmatter(&mut reader).unwrap();
+
+        assert_eq!(result.0, cmark_text);
+        assert_eq!(result.1, String::new());
+        assert_eq!(result.2, None);
+    }
+
+    #[test]
+    fn test_read_cmark_with_frontmatter_toml_frontmatter() {
+        let cmark_text = "+++\ntitle = \"Sample\"\n+++\nThis is a test";
+        let mut reader = Cursor::new(cmark_text);
+        let result = read_cmark_with_frontmatter(&mut reader).unwrap();
+
+        assert_eq!(result.0, "\nThis is a test");
+        assert_eq!(result.1, "+++");
+        assert_eq!(result.2, Some("\ntitle = \"Sample\"\n".to_string()));
+    }
+
+    #[test]
+    fn test_xml_from_cmark() {
+        let cmark_text = "This is **bold** and *italic*";
+        let expected_xml =
+            "<body xmlns='markdown'><p>This is <strong>bold</strong> and <em>italic</em></p></body>";
+
+        let xml = xml_from_cmark(cmark_text, false);
+        assert_eq!(xml, expected_xml);
+    }
+
+    #[test]
+    fn test_xmldom_from_cmark() {
+        let cmark_text = "This is **bold** and *italic*";
+        let expected_xml = "<body xmlns='markdown'><p>This is <strong>bold</strong> and <em>italic</em></p></body>";
+
+        let xml_root = xmldom_from_cmark(cmark_text, false);
+        let mut buf = Vec::<u8>::new();
+        xml_root.write_to(&mut buf).unwrap();
+        let xml_str = String::from_utf8(buf).unwrap();
+
+        assert_eq!(xml_str, expected_xml);
+    }
+
+    #[test]
+    fn test_cmark_from_xml() {
+        let xml_str = "<body xmlns=\"markdown\"><p>This is <strong>bold</strong> and <em>italic</em></p></body>";
+        let expected_cmark = "This is **bold** and *italic*\n";
+
+        let cmark = cmark_from_xml(xml_str, false).unwrap();
+        assert_eq!(cmark, expected_cmark);
+    }
+
+    #[test]
+    fn test_cmark_from_xmldom() {
+        let xml_str = "<body xmlns=\"markdown\"><p>This is <strong>bold</strong> and <em>italic</em></p></body>";
+        let expected_cmark = "This is **bold** and *italic*\n";
+
+        let xml_root: Element = xml_str.parse().unwrap();
+        let cmark = cmark_from_xmldom(&xml_root, false);
+        assert_eq!(cmark, expected_cmark);
+    }
+}

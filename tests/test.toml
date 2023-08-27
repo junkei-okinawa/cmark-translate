@@ -1,0 +1,4 @@
+
+[glossaries]
+colors = { "red" = "赤", "blue" = "青" }
+numbers = { "one" = "一", "two" = "二" }

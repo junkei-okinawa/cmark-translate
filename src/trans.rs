@@ -29,6 +29,11 @@ pub async fn translate_cmark_file<P: AsRef<std::path::Path>>(
         && (src_path.as_ref().extension().unwrap() == "md"
             || src_path.as_ref().extension().unwrap() == "mdx");
 
+    // If Deepl API KEY is a free version, get the number of characters remaining to be translated.
+    if deepl.config.is_free_api_key() {
+        api_availability_check(&deepl, &cmark_text).await?;
+    }
+
     // Parse frontmatter. For Markdown files, do not translate front matter.
     let translated_frontmatter = match frontmatter {
         Some(frontmatter) if !is_md_file => {
@@ -103,6 +108,12 @@ pub async fn translate_toml(
             .iter()
             .map(|s| s.as_str())
             .collect::<Vec<&str>>();
+
+        // If Deepl API KEY is a free version, get the number of characters remaining to be translated.
+        if deepl.config.is_free_api_key() {
+            api_availability_check(&deepl, &src_vec.join("")).await?;
+        }
+
         // Translate texts
         let translated_vec = deepl
             .translate_strings(from_lang, to_lang, formality, &src_vec)
@@ -146,6 +157,11 @@ pub async fn translate_cmark(
 
     log::trace!("111111 added ignore tags. XML: {}\n", xml);
 
+    // If Deepl API KEY is a free version, get the number of characters remaining to be translated.
+    if deepl.config.is_free_api_key() {
+        api_availability_check(&deepl, &xml).await?;
+    }
+
     // translate
     let xml_translated = deepl
         .translate_xml(from_lang, to_lang, formality, target_name, &xml)
@@ -169,4 +185,95 @@ pub async fn translate_cmark(
     log::trace!("444444 cmark_translated: {}\n", &cmark_translated);
 
     Ok(cmark_translated)
+}
+
+async fn api_availability_check(deepl: &deepl::Deepl, text: &str) -> Result<bool, std::io::Error> {
+    let remaining_chars = deepl::MAX_TRANSLATE_LENGTH - deepl.get_usage().await.unwrap() as usize;
+    log::info!("Remaining characters: {}", remaining_chars);
+    if remaining_chars < text.len() {
+        log::error!("The number of characters to be translated exceeds the limit.");
+        return Err(std::io::Error::from(std::io::ErrorKind::Other));
+    }
+    Ok(true)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[tokio::test]
+    async fn test_translate_cmark_file() -> Result<(), Box<dyn std::error::Error>> {
+        // Load Deepl configuration from "deepl.toml"
+        let deepl = deepl::Deepl::with_config("deepl.toml").unwrap();
+
+        let from_lang = deepl::Language::En;
+        let to_lang = deepl::Language::Ja;
+        let formality = deepl::Formality::Formal;
+
+        // Prepare temporary directory for testing
+        let tests_dir = PathBuf::from("./tests");
+        let src_path = tests_dir.as_path().join("test.md");
+        let dst_path = tests_dir.as_path().join("translated.md");
+        std::fs::write(
+            &src_path,
+            "+++\ntitle = \"Hello World\"\n+++\nThis is a test.",
+        )?;
+
+        // Call the function to be tested
+        // APIの使用上限に達するとエラーになる。
+        translate_cmark_file(&deepl, from_lang, to_lang, formality, &src_path, &dst_path)
+            .await
+            .unwrap();
+
+        // Check if the translated content is as expected
+        let translated_content = std::fs::read_to_string(&dst_path)?;
+        let expected_content = "+++\ntitle = \"こんにちは世界\"\n+++\nこれはテストです。\n<!---\nThis is a test.\n-->\n";
+        assert_eq!(translated_content, expected_content);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_translate_toml() -> Result<(), Box<dyn std::error::Error>> {
+        // Load Deepl configuration from "deepl.toml"
+        let deepl = deepl::Deepl::with_config("deepl.toml").unwrap();
+
+        let from_lang = deepl::Language::En;
+        let to_lang = deepl::Language::Ja;
+        let formality = deepl::Formality::Formal;
+
+        let toml_frontmatter = r#"title = "Hello World"
+                                        description = "Description"
+                                        [extra]
+                                        time = "2023-03-10""#;
+
+        let translated_frontmatter =
+            translate_toml(&deepl, from_lang, to_lang, formality, toml_frontmatter).await?;
+        let expected_translated = r#"title = "こんにちは世界"
+                                            description = "説明"
+                                            [extra]
+                                            time = "2023年3月10日""#;
+        assert_eq!(translated_frontmatter, expected_translated);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_translate_cmark() -> Result<(), Box<dyn std::error::Error>> {
+        // Load Deepl configuration from "deepl.toml"
+        let deepl = deepl::Deepl::with_config("deepl.toml").unwrap();
+
+        let from_lang = deepl::Language::En;
+        let to_lang = deepl::Language::Ja;
+        let formality = deepl::Formality::Formal;
+
+        let cmark_text = "This is a test.";
+        let translated_cmark =
+            translate_cmark(&deepl, from_lang, to_lang, formality, cmark_text).await?;
+        let expected_translated = "これはテストです。";
+        assert_eq!(translated_cmark, expected_translated);
+
+        Ok(())
+    }
 }
