@@ -54,18 +54,28 @@ pub async fn translate_cmark_file<P: AsRef<std::path::Path>>(
     }
 
     // Print result
-    let mut f = std::fs::File::create(&dst_path)?;
+    // let mut f = std::fs::File::create(&dst_path)?;
+    let mut write_string = String::new();
     if let Some(translated_frontmatter) = translated_frontmatter {
-        f.write_all(format!("{}{}", delimiter, "\n").as_bytes())?;
-        f.write_all(translated_frontmatter.as_bytes())?;
-        f.write_all(format!("{}{}", delimiter, "\n").as_bytes())?;
+        write_string.push_str(format!("{}{}", delimiter, "\n").as_str());
+        write_string.push_str(translated_frontmatter.as_str());
+        write_string.push_str(format!("{}{}", delimiter, "\n").as_str());
+        // f.write_all(format!("{}{}", delimiter, "\n").as_bytes())?;
+        // f.write_all(translated_frontmatter.as_bytes())?;
+        // f.write_all(format!("{}{}", delimiter, "\n").as_bytes())?;
     }
-    f.write_all(translated_cmark.as_bytes())?;
+    write_string.push_str(translated_cmark.as_str());
+    // f.write_all(translated_cmark.as_bytes())?;
 
     // 原文をコメントアウトで残す。原文に"-->"が含まれていると原文全体のコメントが失敗するため"-!->"に置換する。
-    f.write_all("\n<!---\n".as_bytes())?;
-    f.write_all(cmark_text.replace("-->", "-!->").as_bytes())?;
-    f.write_all("\n-->\n".as_bytes())?;
+    write_string.push_str("\n<!---\n");
+    write_string.push_str(&cmark_text.as_str().replace("-->", "-!->"));
+    write_string.push_str("\n-->\n");
+    // f.write_all("\n<!---\n".as_bytes())?;
+    // f.write_all(cmark_text.replace("-->", "-!->").as_bytes())?;
+    // f.write_all("\n-->\n".as_bytes())?;
+    let mut f = std::fs::File::create(&dst_path)?;
+    f.write_all(write_string.as_bytes())?;
     Ok(())
 }
 
