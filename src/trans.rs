@@ -61,8 +61,10 @@ pub async fn translate_cmark_file<P: AsRef<std::path::Path>>(
         f.write_all(format!("{}{}", delimiter, "\n").as_bytes())?;
     }
     f.write_all(translated_cmark.as_bytes())?;
+
+    // 原文をコメントアウトで残す。原文に"-->"が含まれていると原文全体のコメントが失敗するため"-!->"に置換する。
     f.write_all("\n<!---\n".as_bytes())?;
-    f.write_all(cmark_text.as_bytes())?;
+    f.write_all(cmark_text.replace("-->", "-!->").as_bytes())?;
     f.write_all("\n-->\n".as_bytes())?;
     Ok(())
 }
@@ -188,11 +190,20 @@ pub async fn translate_cmark(
 }
 
 async fn api_availability_check(deepl: &deepl::Deepl, text: &str) -> Result<bool, std::io::Error> {
-    let remaining_chars = deepl::MAX_TRANSLATE_LENGTH - deepl.get_usage().await.unwrap() as usize;
+    let used_chars = deepl.get_usage().await.unwrap() as usize;
+    let remaining_chars = deepl::MAX_TRANSLATE_LENGTH - used_chars;
     log::info!("Remaining characters: {}", remaining_chars);
     if remaining_chars < text.len() {
-        log::error!("The number of characters to be translated exceeds the limit.");
-        return Err(std::io::Error::from(std::io::ErrorKind::Other));
+        let error_message = format!(
+            "The number of characters to be translated exceeds the limit. {}/{} Used.",
+            used_chars,
+            deepl::MAX_TRANSLATE_LENGTH
+        );
+        log::error!("{}", error_message);
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            error_message,
+        ));
     }
     Ok(true)
 }

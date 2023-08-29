@@ -171,7 +171,7 @@ async fn main() -> std::io::Result<()> {
                     let deepl = deepl_with_config().await;
 
                     // run translation
-                    let _res = trans::translate_cmark_file(
+                    let res = trans::translate_cmark_file(
                         &deepl.unwrap(),
                         lang_from,
                         lang_to,
@@ -180,8 +180,13 @@ async fn main() -> std::io::Result<()> {
                         &output,
                     )
                     .await;
+
+                    match res {
+                        Ok(_) => println!("Translated: {:?}", output),
+                        Err(e) => println!("Error: {:?}", e),
+                    }
                     // println!("input  : {:?}", input);
-                    println!("output : {:?}", output);
+                    // println!("output : {:?}", output);
                 })
                 .collect::<Vec<_>>();
             // Wait for all translation tasks
