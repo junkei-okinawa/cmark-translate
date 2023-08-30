@@ -134,7 +134,7 @@ impl Deepl {
 
         let glossary_id = if glossary_map.contains_key(target_name) {
             glossary_map
-                .get("internet_computer")
+                .get(self.config.project_name.as_str())
                 .unwrap()
                 .glossary_id
                 .clone()
@@ -434,6 +434,8 @@ impl std::str::FromStr for Formality {
 #[serde(rename_all = "snake_case")]
 pub struct DeeplConfig {
     api_key: String,
+    pub project_name: String,
+    pub target_extensions: Option<HashMap<String, Vec<String>>>,
     glossaries: HashMap<String, HashMap<String, String>>,
     ignores: Option<HashMap<String, Vec<String>>>,
 }

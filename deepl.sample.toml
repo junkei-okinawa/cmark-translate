@@ -1,6 +1,17 @@
+# 必須: DeepL APIキー
 api_key = "your_DeepL_api_key"
 
+# 必須: 翻訳プロジェクト名　※ここで指定したtarget_extensions, glossaries, ignoresのグループ名と同じにする
+project_name = "internet_computer"
+
+[target_extensions]
+# オプション: 翻訳プロジェクト名 = [拡張子, 拡張子, ...]
+# 指定しない場合は、全ての拡張子が翻訳対象になる
+internet_computer = ["md", "mdx"]
+
+# [glossaries.翻訳プロジェクト名]
 [glossaries.internet_computer]
+# オプション: "翻訳元" = "翻訳後"
 "query call" = "クエリーコール"
 "update call" = "アップデートコール"
 "minting" = "発行"
@@ -11,7 +22,7 @@ api_key = "your_DeepL_api_key"
 "principal" = "プリンシパル"
 
 [ignores]
-# ignoreグループ名 = [単語, 単語, ...]
+# オプション: 翻訳プロジェクト名 = [単語, 単語, ...]
 internet_computer = [
   "Internet Computer( Protocol)?",
   "Actor",

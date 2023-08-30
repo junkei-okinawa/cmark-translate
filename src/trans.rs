@@ -164,7 +164,7 @@ pub async fn translate_cmark(
     let xml = cmark_xml::xml_from_cmark(&cmark_text, true);
     log::trace!("XML: {}\n", xml);
 
-    let target_name = "internet_computer";
+    let target_name = deepl.config.project_name.as_str();
     let xml = deepl::Deepl::add_ignore_tags(deepl, target_name, &xml).await;
 
     log::trace!("111111 added ignore tags. XML: {}\n", xml);

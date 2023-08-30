@@ -132,32 +132,34 @@ async fn main() -> std::io::Result<()> {
                 let mut files = Vec::new();
 
                 // inputディレクトリを再帰処理して翻訳対象ファイルPath, 出力ファイルPathを生成する。
-                let _paths = walkdir::new(PathBuf::from(&input), max_depth, hidden)
-                    .iter()
-                    .map(|e| {
-                        let file_path = e.as_path();
-                        let file_path_string = file_path.to_str().unwrap().to_string();
+                let deepl = deepl_with_config().await;
+                let _paths =
+                    walkdir::new(&deepl.unwrap(), PathBuf::from(&input), max_depth, hidden)
+                        .iter()
+                        .map(|e| {
+                            let file_path = e.as_path();
+                            let file_path_string = file_path.to_str().unwrap().to_string();
 
-                        // file_path を取得し output 用の file_path を生成する。
-                        // path_join_string の先頭文字列がOSの separator文字列だと、
-                        // 後続の Path の join で path_join_string だけが有効になってしまうので
-                        // 先頭の separator文字列は削除する。
-                        let mut path_join_string = file_path_string.replacen(&input, "", 1);
-                        path_join_string =
-                            if path_join_string.chars().nth(0).unwrap().to_string() == sep {
-                                path_join_string.replacen(&sep, "", 1)
-                            } else {
-                                path_join_string
-                            };
+                            // file_path を取得し output 用の file_path を生成する。
+                            // path_join_string の先頭文字列がOSの separator文字列だと、
+                            // 後続の Path の join で path_join_string だけが有効になってしまうので
+                            // 先頭の separator文字列は削除する。
+                            let mut path_join_string = file_path_string.replacen(&input, "", 1);
+                            path_join_string =
+                                if path_join_string.chars().nth(0).unwrap().to_string() == sep {
+                                    path_join_string.replacen(&sep, "", 1)
+                                } else {
+                                    path_join_string
+                                };
 
-                        files.push((
-                            PathBuf::from(&file_path_string),
-                            PathBuf::from(&output).join(path_join_string),
-                        ));
+                            files.push((
+                                PathBuf::from(&file_path_string),
+                                PathBuf::from(&output).join(path_join_string),
+                            ));
 
-                        Some(())
-                    })
-                    .collect::<Vec<_>>();
+                            Some(())
+                        })
+                        .collect::<Vec<_>>();
                 files
             } else {
                 vec![(input_path, input_output.clone())]
