@@ -1,17 +1,26 @@
 # 必須: DeepL APIキー
 api_key = "your_DeepL_api_key"
 
-# 必須: 翻訳プロジェクト名　※ここで指定したtarget_extensions, glossaries, ignoresのグループ名と同じにする
+# 必須: 翻訳プロジェクト名　
+# ここで指定したプロジェクト名がtarget_extensions, glossaries, ignoresで設定されている場合は
+# 翻訳実行時にそれらの設定が適用される
 project_name = "internet_computer"
 
+# 必須: 原文をバックアップするかどうか。true/false
+# true => 翻訳後のファイル下部にコメントアウトで原文を残す
+# false => 原文を残さない
+backup_original_text = true
+
+# オプション: 翻訳対象ファイル拡張子
+# 翻訳プロジェクト名 = [拡張子, 拡張子, ...]
+# 指定しない場合には全ての拡張子が対象になる
 [target_extensions]
-# オプション: 翻訳プロジェクト名 = [拡張子, 拡張子, ...]
-# 指定しない場合は、全ての拡張子が翻訳対象になる
 internet_computer = ["md", "mdx"]
 
+# オプション: 辞書
 # [glossaries.翻訳プロジェクト名]
+# "翻訳元" = "翻訳後"
 [glossaries.internet_computer]
-# オプション: "翻訳元" = "翻訳後"
 "query call" = "クエリーコール"
 "update call" = "アップデートコール"
 "minting" = "発行"
@@ -21,8 +30,9 @@ internet_computer = ["md", "mdx"]
 "state" = "ステート"
 "principal" = "プリンシパル"
 
+# オプション: 翻訳除外ワードリスト
+# 翻訳プロジェクト名 = [単語, 単語, ...]
 [ignores]
-# オプション: 翻訳プロジェクト名 = [単語, 単語, ...]
 internet_computer = [
   "Internet Computer( Protocol)?",
   "Actor",

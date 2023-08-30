@@ -435,6 +435,7 @@ impl std::str::FromStr for Formality {
 pub struct DeeplConfig {
     api_key: String,
     pub project_name: String,
+    pub backup_original_text: bool,
     pub target_extensions: Option<HashMap<String, Vec<String>>>,
     glossaries: HashMap<String, HashMap<String, String>>,
     ignores: Option<HashMap<String, Vec<String>>>,
