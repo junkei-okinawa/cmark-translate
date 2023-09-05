@@ -163,7 +163,7 @@ pub async fn translate_cmark(
     let target_name = deepl.config.project_name.as_str();
     let xml = deepl::Deepl::add_ignore_tags(deepl, target_name, &xml).await;
 
-    log::trace!("111111 added ignore tags. XML: {}\n", xml);
+    log::trace!("added ignore tags. XML: {}\n", xml);
 
     // If Deepl API KEY is a free version, get the number of characters remaining to be translated.
     if deepl.config.is_free_api_key() {
@@ -176,21 +176,9 @@ pub async fn translate_cmark(
         .await
         .unwrap();
 
-    // write back to markdown format
-    log::trace!(
-        "222222 Translated XML(before remove ignore tags): {}\n",
-        &xml_translated
-    );
-
     let xml_translated = deepl::Deepl::remove_ignore_tags(deepl, &xml_translated).await;
-    log::trace!(
-        "333333 Translated XML(after remove ignore tags): {}\n",
-        &xml_translated
-    );
 
     let cmark_translated = cmark_xml::cmark_from_xml(&xml_translated, true).unwrap();
-
-    log::trace!("444444 cmark_translated: {}\n", &cmark_translated);
 
     Ok(cmark_translated)
 }

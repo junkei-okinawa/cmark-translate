@@ -4,6 +4,9 @@
 //!
 
 use regex::Regex;
+use reqwest_middleware::ClientBuilder;
+use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
+use reqwest_tracing::TracingMiddleware;
 use std::collections::{BTreeMap, HashMap};
 
 pub const MAX_TRANSLATE_LENGTH: usize = 500_000;
@@ -75,8 +78,14 @@ impl Deepl {
             params.push(("text", *t));
         }
 
+        // Retry up to 3 times with increasing intervals between attempts.
+        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(3);
+        let client = ClientBuilder::new(reqwest::Client::new())
+            .with(TracingMiddleware::default())
+            .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+            .build();
+
         // Make DeepL API request
-        let client = reqwest::Client::new();
         let resp = client
             .post(self.config.endpoint("translate"))
             .header(
@@ -85,7 +94,8 @@ impl Deepl {
             )
             .form(&params)
             .send()
-            .await?;
+            .await
+            .unwrap();
 
         // Returns error
         resp.error_for_status_ref()?;
